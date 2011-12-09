@@ -1,0 +1,315 @@
+<body>
+<input id="przycisk" type="button" value="start/stop"/>
+</br>
+<input id="showHideBounds" type="button" value="poka¿ ramki"/>
+<div id="container" style="border:1px solid; cursor:none; width:480px; height:320px;">
+<canvas id="canvas" width="480" height="320">
+<script language="javascript" src="http://code.jquery.com/jquery-1.4.2.js" ></script>
+<script>
+
+var gameloopId;
+var speed = 2;
+var horizontalSpeed = speed;
+var verticalSpeed = speed;
+var screenWidth;
+var screenHeight;
+var gameRunning = false;
+var ctx;
+var showBounds = false;
+
+var padImg = new Image();
+var ballImg = new Image
+var redImg = new Image();
+var blueImg = new Image();
+var yellowImg = new Image();
+
+var bricks = new Array();
+
+var boingPad = new Audio("./sounds/hitPad.wav");
+var boingBrickRed = new Audio("./sounds/hitBrickRed.wav");
+var boingBrickBlue = new Audio("./sounds/hitBrickBlue.wav");
+var boingBrickYellow = new Audio("./sounds/hitBrickYellow.wav");
+
+$(document).ready(function(){
+	init();
+});
+
+function GameObject()
+{
+	this.x = 0;
+	this.y = 0;
+	this.image = null;
+}
+
+function Ball() {};
+Ball.prototype = new GameObject();
+
+var ball = new Ball();
+
+function Pad() {};
+Pad.prototype = new GameObject();
+
+var pad = new Pad();
+
+function Brick() {};
+Brick.prototype = new GameObject();
+Brick.prototype.row = 0;
+Brick.prototype.col = 0;
+Brick.prototype.color = null;
+Brick.prototype.hit = false;
+
+function initBricks(){
+	var count=0;
+	for(var x=0; x<3; x++)
+	{
+		for(var y=0; y<13; y++)
+		{
+			brick = new Brick();
+			if(x==0){
+			brick.image = redImg;
+			brick.color = "red";
+			}
+			if(x==1){
+			brick.image = yellowImg;
+			brick.color = "yellow";
+			}
+			if(x==2){
+			brick.image = blueImg;
+			brick.color = "blue";
+			}
+
+			brick.row = x;
+			brick.col = y;
+			brick.X = 35 * brick.col + 15;
+			brick.Y = 30 * brick.row + 20;
+			bricks[count] = brick;
+			count++;
+		}
+	}
+}
+
+function initSettings(){
+
+	ctx = document.getElementById('canvas').getContext('2d');
+
+	screenWidth = parseInt($("#canvas").attr("width"));
+	screenHeight = parseInt($("#canvas").attr("height"));
+
+	ball.X = parseInt(screenWidth/2);
+	ball.Y = parseInt(screenHeight/2);
+
+	pad.X = parseInt(screenWidth/2);
+	pad.Y = screenHeight - 10;
+
+}
+
+
+function loadImages(){
+	padImg.src = "images/pad.png";
+	ballImg.src = "images/ball.gif";
+	redImg.src = "images/red.png";
+	blueImg.src = "images/blue.png";
+	yellowImg.src = "images/yellow.png";
+
+	pad.image = padImg;
+	ball.image = ballImg;
+	
+}
+function init(){
+	initSettings();
+	loadImages();
+	initBricks();
+	
+	$("#container").mousemove(function(e){
+		pad.X = e.pageX - (padImg.width/2);
+	});
+
+	$("#przycisk").click(function (){
+
+		toggleGameplay();
+	});
+	
+			$("#showHideBounds").click(function (){		
+			showBounds = !showBounds;
+			gameLoop();
+		});
+		
+}
+
+
+
+
+function checkIntersect(object1, object2, overlap)
+{
+	A1 = object1.X + overlap;
+	B1 = object1.X + object1.image.width - overlap;
+	C1 = object1.Y + overlap; 
+	D1 = object1.Y + object1.image.height - overlap;
+	
+	A2 = object2.X + overlap;
+	B2 = object2.X + object2.image.width - overlap;
+	C2 = object2.Y + overlap;
+	D2 = object2.Y + object2.image.width - overlap;
+	
+	if(A1 > A2 && A1 < B2 || B1 > A2 && B1 < B2)
+	{
+		if(C1 > C2 && C1 < D2 || D1 > C2 && D1 < D2)
+		{
+			return true;
+		}
+		
+	}
+	return false;
+}
+
+function showObjectBounds(gameObject, transitionX, transitionY)
+{
+    if(showBounds)
+    {
+        if(typeof(transitionX) != 'undefined')
+            rectX = transitionX;
+        else
+            rectX = gameObject.X;
+ 
+        if(typeof(transitionY) != 'undefined')
+            rectY = transitionY;
+        else
+            rectY = gameObject.Y;
+ 
+        ctx.save();
+ 
+        ctx.strokeStyle = '#f00';
+        ctx.lineWidth   = 2;
+        ctx.strokeRect(rectX, rectY, gameObject.image.width, gameObject.image.height);
+ 
+        ctx.restore();
+    }
+}
+
+function drawBricks()
+{
+	 
+	    for(var x=0; x<bricks.length; x++)
+	    {
+		        currentBrick = bricks[x];
+		        if(!currentBrick.hit)
+		        {
+							
+			                ctx.drawImage(currentBrick.image, bricks[x].X, bricks[x].Y);
+							showObjectBounds(currentBrick);
+			        }
+		    }
+}
+
+function drawPad(){
+	showObjectBounds(pad);
+	ctx.drawImage(pad.image, pad.X, pad.Y);
+}
+
+function drawBall(){
+	showObjectBounds(ball);
+	ctx.drawImage(ball.image, ball.X, ball.Y);
+}
+
+function collisionEdge(){
+
+	if(ball.X > screenWidth - ballImg.width)
+	{
+		horizontalSpeed = -speed;
+	}
+
+	if(ball.X < 0)
+	{
+		horizontalSpeed = speed;
+	}
+	if(ball.Y < 0)
+	{
+		verticalSpeed = speed;
+	}
+
+}
+
+function collisionPad(){
+
+	if(checkIntersect(ball, pad, 0))
+	{
+		if((ball.X + ball.image.width/2) < (pad.X + pad.image.width*0.25))
+		{
+			horizontalSpeed = -speed;
+		}
+		else if((ball.X + ball.image.width/2) < (pad.X + pad.image.width*0.5))
+		{
+			horizontalSpeed = -speed/2;
+		}
+		else if((ball.X + ball.image.width/2) < (pad.X + pad.image.width*0.75))
+		{
+			horizontalSpeed = speed/2;
+		}
+		else
+		{
+			horizontalSpeed = speed;
+		}
+		verticalSpeed = -speed;
+		boingPad.play();
+	}
+
+}
+
+function collisionBrick(){
+
+			for(var x=0; x<bricks.length; x++)
+		{
+			var brick = bricks[x];
+			
+			if(!brick.hit)
+			{
+				if(checkIntersect(brick, ball, 1))
+				{
+					brick.hit = true;
+					if(verticalSpeed>0)verticalSpeed = -speed;
+					else verticalSpeed = speed;
+					if(brick.color == "red")boingBrickRed.play();
+					
+				}
+			}
+		}
+
+}
+
+function gameLoop(){
+
+	ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+	ball.X += horizontalSpeed;
+	ball.Y += verticalSpeed;
+
+	drawBall();
+
+	drawPad();
+	
+	drawBricks();
+
+	collisionEdge();
+
+	collisionPad();
+	
+	collisionBrick();
+
+}
+
+function toggleGameplay()
+{
+	gameRunning = !gameRunning;
+	
+	if(gameRunning)
+	{
+		gameloopId = setInterval(gameLoop, 10);
+	}
+	else
+	{
+		clearInterval(gameloopId);
+	}
+}
+
+</script>
+</div>
