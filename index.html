@@ -1,5 +1,6 @@
 <body>
 <input id="przycisk" type="button" value="start/stop"/>
+<input id="restart" type="button" value="restart gry"/>
 </br>
 <input id="showHideBounds" type="button" value="poka¿ ramki"/>
 <div id="container" style="border:1px solid; cursor:none; width:480px; height:320px;">
@@ -129,7 +130,11 @@ function init(){
 		toggleGameplay();
 	});
 	
-			$("#showHideBounds").click(function (){		
+	$("#restart").click(function (){
+		restartGameplay();
+	});
+	
+    $("#showHideBounds").click(function (){		
 			showBounds = !showBounds;
 			gameLoop();
 		});
@@ -233,7 +238,7 @@ function collisionPad(){
 
 	if(checkIntersect(ball, pad, 0))
 	{
-		if((ball.X + ball.image.width/2) < (pad.X + pad.image.width*0.25))
+		if((ball.X + ball.image.width/2) < (pad.X + pad.image.width*0.10))
 		{
 			horizontalSpeed = -speed;
 		}
@@ -268,8 +273,9 @@ function collisionBrick(){
 					brick.hit = true;
 					if(verticalSpeed>0)verticalSpeed = -speed;
 					else verticalSpeed = speed;
-					if(brick.color == "red")boingBrickRed.play();
-					
+					if(brick.color=="red")boingBrickRed.play();
+					if(brick.color=="yellow")boingBrickYellow.play();
+					if(brick.color=="blue")boingBrickBlue.play();
 				}
 			}
 		}
@@ -311,5 +317,15 @@ function toggleGameplay()
 	}
 }
 
+function restartGameplay()
+{
+	ball.X = parseInt(screenWidth/2);
+	ball.Y = parseInt(screenHeight/2);
+	
+	horizontalSpeed = speed;
+	verticalSpeed = speed;
+	
+	initBricks();
+}	
 </script>
 </div>
